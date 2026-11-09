@@ -1,0 +1,193 @@
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" />
+          <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>AI Workbench</strong>
+        <small>Local AI assistant</small>
+      </span>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="model-pill" title="Choose the local model served by Ollama">
+        <span class="status-dot" aria-hidden="true"></span>
+        <select
+          class="model-select"
+          [value]="model()"
+          (change)="onModelChange($event)"
+          [disabled]="isReplying()"
+          aria-label="Choose model"
+        >
+          @for (name of models(); track name) {
+            <option [value]="name">{{ name }}</option>
+          }
+        </select>
+        <svg
+          class="model-chevron"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </div>
+
+      <button
+        type="button"
+        class="icon-button"
+        (click)="startNewChat()"
+        [disabled]="messages().length === 0"
+        aria-label="Start a new chat"
+        title="New chat"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="conversation" #messageList>
+    @if (messages().length === 0) {
+      <section class="welcome">
+        <span class="welcome-mark" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3Z" />
+            <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z" />
+          </svg>
+        </span>
+
+        <h2>How can I help you today?</h2>
+        <p>Ask a question, or start with one of these prompts.</p>
+
+        <div class="suggestions">
+          @for (suggestion of suggestions; track suggestion.title; let i = $index) {
+            <button type="button" class="suggestion" (click)="send(suggestion.prompt)">
+              <span class="suggestion-number" aria-hidden="true">0{{ i + 1 }}</span>
+              <span class="suggestion-copy">
+                <strong>{{ suggestion.title }}</strong>
+                <small>{{ suggestion.description }}</small>
+              </span>
+              <svg
+                class="suggestion-arrow"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          }
+        </div>
+      </section>
+    } @else {
+      <div class="messages" role="log" aria-live="polite">
+        @for (message of messages(); track message.id) {
+          <article class="message" [class.message-user]="message.role === 'user'">
+            <span class="avatar" [class.avatar-user]="message.role === 'user'" aria-hidden="true">
+              {{ message.role === 'user' ? 'Y' : 'AI' }}
+            </span>
+
+            <div class="message-body">
+              <div class="message-meta">
+                <span>{{ message.role === 'user' ? 'You' : 'AI Workbench' }}</span>
+                <time>{{ formatTime(message.createdAt) }}</time>
+              </div>
+              <div class="bubble" [innerHTML]="message.content | markdown"></div>
+            </div>
+          </article>
+        }
+
+        @if (isReplying()) {
+          <article class="message" role="status" aria-label="AI Workbench is typing">
+            <span class="avatar" aria-hidden="true">AI</span>
+            <div class="message-body">
+              <div class="message-meta">
+                <span>AI Workbench</span>
+                <time>thinking</time>
+              </div>
+              <div class="bubble typing-bubble">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="sr-only">AI Workbench is typing</span>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    }
+  </main>
+
+  <footer class="composer">
+    <div class="composer-inner">
+      <div class="composer-box">
+        <textarea
+          #composer
+          rows="1"
+          [value]="draft()"
+          (input)="onDraftInput($event)"
+          (keydown)="onComposerKeydown($event)"
+          placeholder="Message AI Workbench..."
+          aria-label="Message"
+        ></textarea>
+
+        <button
+          type="button"
+          class="send-button"
+          [disabled]="!canSend()"
+          (click)="send()"
+          aria-label="Send message"
+          title="Send message"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M12 19V5" />
+            <path d="m5 12 7-7 7 7" />
+          </svg>
+        </button>
+      </div>
+
+      <p class="composer-hint">Enter to send · Shift + Enter for a new line</p>
+    </div>
+  </footer>
+</div>
